@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { produtosSeed, CATEGORIAS, MODALIDADES, PRODUCTS_STORAGE_KEY } from '../../data/products.js';
+import { useNavigate } from 'react-router-dom';
+import { CATEGORIAS, MODALIDADES } from '../../data/products.js';
+import { hasAdminSession, signOutAdmin } from '../../data/supabase.js';
+import { useProducts } from '../../state/products.jsx';
+import './admin.css';
 
 const KEY_SETTINGS = 'lkoutlet_settings_v1';
 const KEY_ORDERS = 'lkoutlet_orders_v1';
@@ -20,16 +24,42 @@ function writeJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-function requireAdmin() {
-  return sessionStorage.getItem('lkoutlet_admin_ok') === '1';
-}
-
 function formatBRL(cents) {
   return (Number(cents) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function getBasePrice(product) {
+  return product.precoAntigo > product.preco ? product.precoAntigo : product.preco;
+}
+
+function getDiscountPercent(product) {
+  if (product.descontoPercentual > 0) return product.descontoPercentual;
+  if (product.precoAntigo > product.preco) {
+    return Math.round(((product.precoAntigo - product.preco) / product.precoAntigo) * 100);
+  }
+  return 10;
+}
+
+async function optimizeImage(file) {
+  if (!file.type.startsWith('image/')) throw new Error('Selecione um arquivo de imagem.');
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Não foi possível preparar a imagem neste dispositivo.');
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL('image/jpeg', 0.78);
+}
+
 export default function Admin() {
+  const navigate = useNavigate();
   const [authed, setAuthed] = useState(false);
+  const { products, loading: productsLoading, error: catalogError, remote, upsert, remove } = useProducts();
+  const [productError, setProductError] = useState('');
+  const [savingProduct, setSavingProduct] = useState(false);
 
   const [settings, setSettings] = useState(() =>
     ({
@@ -37,13 +67,10 @@ export default function Admin() {
       nomeLoja: 'LK OUTLET',
       whatsappNumber: STORE_WHATSAPP
       }),
-      whatsappNumber: STORE_WHATSAPP,
-      adminUser: 'rick',
-      adminPass: 'rick071007'
+      whatsappNumber: STORE_WHATSAPP
     })
   );
 
-  const [products, setProducts] = useState(() => readJSON(PRODUCTS_STORAGE_KEY, produtosSeed));
   const [orders, setOrders] = useState(() => readJSON(KEY_ORDERS, []));
   const [cupons, setCupons] = useState(() =>
     readJSON(KEY_CUPONS, [
@@ -62,16 +89,12 @@ export default function Admin() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   useEffect(() => {
-    setAuthed(requireAdmin());
+    setAuthed(hasAdminSession());
   }, []);
 
   useEffect(() => {
     writeJSON(KEY_SETTINGS, settings);
   }, [settings]);
-
-  useEffect(() => {
-    writeJSON(PRODUCTS_STORAGE_KEY, products);
-  }, [products]);
 
   useEffect(() => {
     writeJSON(KEY_ORDERS, orders);
@@ -97,15 +120,14 @@ export default function Admin() {
 
   if (!authed) {
     return (
-      <div className="container" style={{ padding: '22px 0' }}>
+      <div className="container adminPage">
         <div className="unauthBox">Acesso negado. Faça login novamente.</div>
-        <style>{`.unauthBox{border:1px solid rgba(255,255,255,.06);border-radius:22px;background:rgba(0,0,0,.12);padding:18px;font-weight:900}`}</style>
       </div>
     );
   }
 
   return (
-    <div className="container" style={{ padding: '22px 0' }}>
+    <div className="container adminPage">
       <div className="adminShell">
         <div className="adminTop">
           <div>
@@ -117,8 +139,9 @@ export default function Admin() {
             <button
               className="btn secondary"
               onClick={() => {
-                sessionStorage.removeItem('lkoutlet_admin_ok');
-                alert('Sessão encerrada.');
+                signOutAdmin();
+                setAuthed(false);
+                navigate('/admin/login');
               }}
             >
               Sair
@@ -177,18 +200,25 @@ export default function Admin() {
               <div className="panelHead">
                 <div>
                   <div className="panelTitle">Tabela de produtos</div>
-                  <div className="panelMuted">Itens armazenados localmente no navegador.</div>
+                  <div className="panelMuted">
+                    {remote ? 'Catálogo compartilhado com a loja.' : 'Catálogo compartilhado indisponível.'}
+                  </div>
                 </div>
                 <button
                   className="btn"
+                  disabled={productsLoading}
                   onClick={() => {
                     setEditingProduct(null);
+                    setProductError('');
                     setProductDraft({
                       id: `p_${Math.random().toString(16).slice(2)}`,
                       nome: '',
                       descricao: '',
                       preco: 0,
                       precoAntigo: 0,
+                      precoBase: 39000,
+                      promocaoAtiva: false,
+                      descontoPercentual: 10,
                       imagem: '',
                       categoria: CATEGORIAS[0],
                       modalidade: '',
@@ -205,12 +235,17 @@ export default function Admin() {
                 </button>
               </div>
 
-              <div className="table">
+              {catalogError && <div className="adminAlert" role="alert">{catalogError}</div>}
+              {productError && <div className="adminAlert" role="alert">{productError}</div>}
+              {productsLoading && <div className="muted" role="status">Sincronizando catálogo...</div>}
+
+              <div className="table productTable">
                 <div className="thead">
                   <div>Nome</div>
                   <div>Categoria</div>
                   <div>Modalidade</div>
                   <div>Preço</div>
+                  <div>Promoção</div>
                   <div>Estoque</div>
                   <div>Status</div>
                   <div></div>
@@ -221,7 +256,15 @@ export default function Admin() {
                       <div className="cell strong">{p.nome}</div>
                       <div className="cell">{p.categoria}</div>
                       <div className="cell">{p.modalidade || 'Definir'}</div>
-                      <div className="cell">{formatBRL(p.preco)}</div>
+                      <div className="cell priceCell">
+                        <span>{formatBRL(p.preco)}</span>
+                        {p.precoAntigo > p.preco && <del>{formatBRL(p.precoAntigo)}</del>}
+                      </div>
+                      <div className="cell">
+                        {p.precoAntigo > p.preco
+                          ? <span className="pill sale">-{getDiscountPercent(p)}%</span>
+                          : <span className="muted">—</span>}
+                      </div>
                       <div className="cell">{p.estoque}</div>
                       <div className="cell">
                         <span className={`pill ${p.ativo ? 'ok' : 'off'}`}>{p.ativo ? 'Ativo' : 'Inativo'}</span>
@@ -231,15 +274,25 @@ export default function Admin() {
                           className="mini"
                           onClick={() => {
                             setEditingProduct(p);
-                            setProductDraft({ ...p });
+                            setProductDraft({
+                              ...p,
+                              precoBase: getBasePrice(p),
+                              promocaoAtiva: Boolean(p.promocaoAtiva || p.precoAntigo > p.preco),
+                              descontoPercentual: getDiscountPercent(p)
+                            });
+                            setProductError('');
                             setProductModalOpen(true);
                           }}
                         >Editar</button>
                         <button
                           className="mini danger"
-                          onClick={() => {
+                          onClick={async () => {
                             if (!confirm('Remover produto?')) return;
-                            setProducts((prev) => prev.filter((x) => x.id !== p.id));
+                            try {
+                              await remove(p.id);
+                            } catch (error) {
+                              setProductError(`Não foi possível remover o produto: ${error.message}`);
+                            }
                           }}
                         >Remover</button>
                       </div>
@@ -372,11 +425,12 @@ export default function Admin() {
               <div className="modalHead">
                 <div>
                   <div className="modalTitle">{editingProduct ? 'Editar produto' : 'Novo produto'}</div>
-                  <div className="modalMuted">Carregar imagem por URL.</div>
+                  <div className="modalMuted">Escolha uma foto do celular ou computador.</div>
                 </div>
                 <button className="mini" onClick={() => setProductModalOpen(false)}>Fechar</button>
               </div>
 
+              {productError && <div className="adminAlert modalAlert" role="alert">{productError}</div>}
               <div className="formGrid">
                 <label>
                   Nome
@@ -387,9 +441,28 @@ export default function Admin() {
                   <textarea value={productDraft?.descricao || ''} onChange={(e) => setProductDraft((d) => ({ ...d, descricao: e.target.value }))} />
                 </label>
                 <label>
-                  Imagem (URL)
-                  <input value={productDraft?.imagem || ''} onChange={(e) => setProductDraft((d) => ({ ...d, imagem: e.target.value }))} />
+                  Foto do produto
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      setProductError('');
+                      try {
+                        const imagem = await optimizeImage(file);
+                        setProductDraft((draft) => ({ ...draft, imagem }));
+                      } catch (error) {
+                        setProductError(`Não foi possível carregar a imagem: ${error.message}`);
+                      }
+                    }}
+                  />
                 </label>
+                <div className="imagePreview">
+                  {productDraft?.imagem
+                    ? <img src={productDraft.imagem} alt="Prévia do produto" />
+                    : <span>Selecione uma imagem para ver a prévia</span>}
+                </div>
 
                 <label>
                   Categoria
@@ -411,13 +484,44 @@ export default function Admin() {
                 </label>
 
                 <label>
-                  Preço (centavos)
-                  <input type="number" value={productDraft?.preco ?? 0} onChange={(e) => setProductDraft((d) => ({ ...d, preco: Number(e.target.value) }))} />
+                  Preço normal (R$)
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={((productDraft?.precoBase ?? 0) / 100).toFixed(2)}
+                    onChange={(e) => setProductDraft((d) => ({
+                      ...d,
+                      precoBase: Math.round((Number(e.target.value) || 0) * 100)
+                    }))}
+                  />
                 </label>
                 <label>
-                  Preço antigo (centavos)
-                  <input type="number" value={productDraft?.precoAntigo ?? 0} onChange={(e) => setProductDraft((d) => ({ ...d, precoAntigo: Number(e.target.value) }))} />
+                  Aplicar promoção
+                  <select
+                    value={productDraft?.promocaoAtiva ? '1' : '0'}
+                    onChange={(e) => setProductDraft((d) => ({ ...d, promocaoAtiva: e.target.value === '1' }))}
+                  >
+                    <option value="0">Não</option>
+                    <option value="1">Sim</option>
+                  </select>
                 </label>
+                {productDraft?.promocaoAtiva && (
+                  <label>
+                    Desconto (%)
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      step="1"
+                      value={productDraft?.descontoPercentual ?? 10}
+                      onChange={(e) => setProductDraft((d) => ({ ...d, descontoPercentual: Number(e.target.value) }))}
+                    />
+                    <span className="fieldHint">
+                      Preço promocional: {formatBRL(Math.round((productDraft.precoBase * (100 - productDraft.descontoPercentual)) / 100))}
+                    </span>
+                  </label>
+                )}
 
                 <label>
                   Tamanho (string)
@@ -456,77 +560,41 @@ export default function Admin() {
               <div className="modalFoot">
                 <button
                   className="btn"
-                  onClick={() => {
+                  disabled={savingProduct}
+                  onClick={async () => {
                     const d = productDraft;
-                    if (!d?.nome) return alert('Nome é obrigatório');
-                    if (!d?.imagem) return alert('Imagem é obrigatória (URL)');
-                    if (!MODALIDADES.includes(d.modalidade)) return alert('Selecione Futsal ou Society');
-                    setProducts((prev) => {
-                      const idx = prev.findIndex((x) => x.id === d.id);
-                      if (idx >= 0) {
-                        const next = [...prev];
-                        next[idx] = { ...d };
-                        return next;
-                      }
-                      return [{ ...d }, ...prev];
-                    });
-                    setProductModalOpen(false);
+                    if (!d?.nome?.trim()) return setProductError('Informe o nome do produto.');
+                    if (!d?.imagem) return setProductError('Selecione uma imagem para o produto.');
+                    if (!MODALIDADES.includes(d.modalidade)) return setProductError('Selecione Futsal ou Society.');
+                    if (!Number.isFinite(d.precoBase) || d.precoBase <= 0) return setProductError('Informe um preço normal maior que zero.');
+                    if (d.promocaoAtiva && (!Number.isInteger(d.descontoPercentual) || d.descontoPercentual < 1 || d.descontoPercentual > 99)) {
+                      return setProductError('O desconto deve ser um número inteiro entre 1% e 99%.');
+                    }
+
+                    const promotionalPrice = Math.round((d.precoBase * (100 - d.descontoPercentual)) / 100);
+                    const { precoBase, ...productData } = d;
+                    const productToSave = {
+                      ...productData,
+                      nome: d.nome.trim(),
+                      preco: d.promocaoAtiva ? promotionalPrice : d.precoBase,
+                      precoAntigo: d.promocaoAtiva ? d.precoBase : 0,
+                      descontoPercentual: d.promocaoAtiva ? d.descontoPercentual : 0
+                    };
+                    setSavingProduct(true);
+                    setProductError('');
+                    try {
+                      await upsert(productToSave);
+                      setProductModalOpen(false);
+                    } catch (error) {
+                      setProductError(`Não foi possível salvar o produto: ${error.message}`);
+                    } finally {
+                      setSavingProduct(false);
+                    }
                   }}
                 >
-                  Salvar
+                  {savingProduct ? 'Salvando...' : 'Salvar produto'}
                 </button>
               </div>
-
-              <style>{`
-                .modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
-                .modal{width:min(980px, 100%);max-height:85vh;overflow:auto;border-radius:22px;border:1px solid rgba(255,255,255,.08);background:rgba(5,6,10,.95);box-shadow:0 30px 120px rgba(0,0,0,.7)}
-                .modalHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 16px 0}
-                .modalTitle{font-family:'Plus Jakarta Sans';font-weight:1000;font-size:24px}
-                .modalMuted{color:rgba(233,234,242,.7);font-weight:800;margin-top:6px;font-size:12px}
-                .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
-                .formGrid label{display:flex;flex-direction:column;gap:8px;color:rgba(233,234,242,.7);font-weight:900;font-size:12px}
-                .formGrid input,.formGrid textarea,.formGrid select{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);color:var(--text);padding:11px 12px;border-radius:14px;outline:none}
-                .formGrid textarea{min-height:90px;resize:vertical}
-                .modalFoot{padding:0 16px 16px;display:flex;justify-content:flex-end}
-
-                .adminShell{border:1px solid rgba(255,255,255,.06);border-radius:22px;background:rgba(0,0,0,.12);padding:18px}
-                .adminTop{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
-                .adminBrand{font-family:'Plus Jakarta Sans';font-weight:1000;font-size:22px}
-                .adminMuted{margin-top:8px;color:rgba(233,234,242,.7);font-weight:800}
-                .adminActions{display:flex;gap:10px;align-items:center}
-                .tabs{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
-                .tabBtn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);color:rgba(233,234,242,.9);padding:10px 12px;border-radius:14px;font-weight:1000;cursor:pointer}
-                .tabBtn.active{border-color:rgba(255,215,0,.55);color:var(--gold);background:rgba(255,215,0,.12)}
-                .panel{margin-top:14px}
-                .panelCard{border:1px solid rgba(255,255,255,.06);border-radius:22px;background:rgba(255,255,255,.02);padding:16px}
-                .panelTitle{font-family:'Plus Jakarta Sans';font-weight:1000;font-size:22px}
-                .panelMuted{color:rgba(233,234,242,.7);font-weight:800;margin-top:8px;font-size:12px}
-                .panelHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-                .muted{color:rgba(233,234,242,.7);font-weight:800}
-
-                .btn{background:rgba(255,215,0,.18);border:1px solid rgba(255,215,0,.45);color:var(--gold);padding:12px 14px;border-radius:18px;font-weight:1000;cursor:pointer}
-                .btn.secondary{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);color:rgba(233,234,242,.92)}
-                .table{margin-top:14px;border:1px solid rgba(255,255,255,.06);border-radius:18px;overflow:hidden}
-                .thead,.tr{display:grid;grid-template-columns:2fr 1fr 1fr .9fr .7fr .7fr 1fr;gap:10px;align-items:center}
-                .thead{background:rgba(255,255,255,.03);padding:12px;font-weight:1000;color:rgba(233,234,242,.75)}
-                .tbody .tr{padding:12px;border-top:1px solid rgba(255,255,255,.05)}
-                .cell{color:rgba(233,234,242,.85);font-weight:800;font-size:14px}
-                .cell.strong{color:rgba(255,255,255,.95)}
-                .actions{display:flex;gap:8px;justify-content:flex-end}
-                .mini{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);color:rgba(233,234,242,.9);padding:8px 10px;border-radius:14px;font-weight:1000;cursor:pointer}
-                .mini.danger{background:rgba(255,77,77,.12);border-color:rgba(255,77,77,.35);color:rgba(255,77,77,.95)}
-                .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12)}
-                .pill.ok{border-color:rgba(49,208,127,.35);color:rgba(49,208,127,.95);background:rgba(49,208,127,.1)}
-                .pill.off{border-color:rgba(255,77,77,.35);color:rgba(255,77,77,.95);background:rgba(255,77,77,.1)}
-
-                .bars{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-                .barRow{display:grid;grid-template-columns:220px 1fr 160px;gap:12px;align-items:center}
-                .barLabel{font-weight:1000;color:rgba(233,234,242,.85)}
-                .barTrack{height:14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);overflow:hidden}
-                .barFill{height:100%;background:linear-gradient(90deg, rgba(255,215,0,.2), rgba(255,215,0,.8));border-radius:999px}
-                .barVal{font-weight:1000;color:rgba(233,234,242,.8);text-align:right}
-                @media(max-width:900px){.thead,.tr{grid-template-columns:1.5fr .9fr .9fr .9fr .7fr .7fr;}.thead div:last-child,.tr .cell.actions{grid-column:1/-1}.barRow{grid-template-columns:1fr;gap:8px}}
-              `}</style>
             </div>
           </div>
         )}
@@ -563,4 +631,3 @@ export default function Admin() {
     </div>
   );
 }
-

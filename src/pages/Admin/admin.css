@@ -1,0 +1,473 @@
+.adminPage {
+  padding-top: 22px;
+  padding-bottom: 48px;
+}
+
+.adminPage .adminShell,
+.adminPage .loginWrap,
+.adminPage .unauthBox {
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 22px;
+  background: rgba(0, 0, 0, .18);
+  padding: 20px;
+}
+
+.adminPage .adminTop,
+.adminPage .panelHead,
+.adminPage .modalHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.adminPage .adminBrand,
+.adminPage .panelTitle,
+.adminPage .modalTitle,
+.adminPage .loginTitle {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 900;
+}
+
+.adminPage .adminBrand {
+  font-size: 23px;
+}
+
+.adminPage .adminMuted,
+.adminPage .panelMuted,
+.adminPage .modalMuted,
+.adminPage .loginSub {
+  color: rgba(233, 234, 242, .68);
+}
+
+.adminPage .adminMuted {
+  margin-top: 7px;
+}
+
+.adminPage .adminActions,
+.adminPage .tabs,
+.adminPage .actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.adminPage .tabs {
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.adminPage .tabBtn,
+.adminPage .btn,
+.adminPage .mini,
+.adminPage .loginBtn {
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.adminPage .tabBtn,
+.adminPage .mini {
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .04);
+  color: rgba(233, 234, 242, .9);
+}
+
+.adminPage .tabBtn:hover,
+.adminPage .mini:hover {
+  border-color: rgba(216, 239, 98, .55);
+}
+
+.adminPage .tabBtn.active {
+  border-color: rgba(216, 239, 98, .65);
+  background: rgba(216, 239, 98, .12);
+  color: var(--gold);
+}
+
+.adminPage .panel {
+  margin-top: 16px;
+}
+
+.adminPage .panelCard {
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .025);
+}
+
+.adminPage .panelTitle {
+  font-size: 20px;
+}
+
+.adminPage .panelMuted {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.adminPage .muted {
+  color: rgba(233, 234, 242, .66);
+}
+
+.adminPage .btn,
+.adminPage .loginBtn {
+  padding: 11px 15px;
+  border: 1px solid rgba(216, 239, 98, .48);
+  border-radius: 12px;
+  background: rgba(216, 239, 98, .15);
+  color: var(--gold);
+}
+
+.adminPage .btn:hover,
+.adminPage .loginBtn:hover {
+  background: rgba(216, 239, 98, .24);
+}
+
+.adminPage .btn:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
+.adminPage .btn.secondary {
+  border-color: rgba(255, 255, 255, .13);
+  background: rgba(255, 255, 255, .04);
+  color: rgba(233, 234, 242, .9);
+}
+
+.adminPage .table {
+  margin-top: 16px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 14px;
+}
+
+.adminPage .productTable .thead,
+.adminPage .productTable .tr {
+  display: grid;
+  grid-template-columns: minmax(150px, 2fr) repeat(3, minmax(90px, 1fr)) minmax(100px, 1fr) minmax(70px, .7fr) minmax(75px, .7fr) minmax(150px, 1.4fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 900px;
+}
+
+.adminPage .table:not(.productTable) .thead,
+.adminPage .table:not(.productTable) .tr {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.5fr) repeat(3, minmax(80px, 1fr)) minmax(150px, 1.5fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 620px;
+}
+
+.adminPage .thead {
+  padding: 12px;
+  background: rgba(255, 255, 255, .04);
+  color: rgba(233, 234, 242, .7);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.adminPage .tbody .tr {
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+.adminPage .cell {
+  min-width: 0;
+  color: rgba(233, 234, 242, .84);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.adminPage .cell.strong {
+  color: #fff;
+  font-weight: 800;
+}
+
+.adminPage .actions {
+  justify-content: flex-end;
+}
+
+.adminPage .mini.danger {
+  border-color: rgba(255, 77, 77, .36);
+  background: rgba(255, 77, 77, .1);
+  color: #ff7b7b;
+}
+
+.adminPage .pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.adminPage .pill.ok {
+  border-color: rgba(49, 208, 127, .35);
+  background: rgba(49, 208, 127, .1);
+  color: #54dda0;
+}
+
+.adminPage .pill.off {
+  border-color: rgba(255, 77, 77, .35);
+  background: rgba(255, 77, 77, .1);
+  color: #ff7b7b;
+}
+
+.adminPage .pill.sale {
+  border-color: rgba(216, 239, 98, .4);
+  background: rgba(216, 239, 98, .12);
+  color: var(--gold);
+}
+
+.adminPage .priceCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.adminPage .priceCell del {
+  color: rgba(233, 234, 242, .48);
+  font-size: 11px;
+}
+
+.adminPage .bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.adminPage .barRow {
+  display: grid;
+  grid-template-columns: minmax(100px, 220px) 1fr minmax(100px, 160px);
+  gap: 12px;
+  align-items: center;
+}
+
+.adminPage .barLabel,
+.adminPage .barVal {
+  color: rgba(233, 234, 242, .84);
+  font-weight: 800;
+}
+
+.adminPage .barTrack {
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .05);
+}
+
+.adminPage .barFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(216, 239, 98, .35), var(--gold));
+}
+
+.adminPage .barVal {
+  text-align: right;
+}
+
+.adminPage .modalOverlay {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, .68);
+  backdrop-filter: blur(5px);
+}
+
+.adminPage .modal {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 18px;
+  background: #151611;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, .65);
+}
+
+.adminPage .modalHead {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  padding: 18px;
+  background: #151611;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+}
+
+.adminPage .modalTitle {
+  font-size: 22px;
+}
+
+.adminPage .modalMuted {
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.adminPage .formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+}
+
+.adminPage .formGrid label,
+.adminPage .loginCard label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: rgba(233, 234, 242, .78);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.adminPage .formGrid input,
+.adminPage .formGrid textarea,
+.adminPage .formGrid select,
+.adminPage .loginCard input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(255, 255, 255, .045);
+  color: var(--text);
+}
+
+.adminPage .formGrid input:focus,
+.adminPage .formGrid textarea:focus,
+.adminPage .formGrid select:focus,
+.adminPage .loginCard input:focus {
+  border-color: rgba(216, 239, 98, .65);
+}
+
+.adminPage .formGrid textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.adminPage .formGrid select option {
+  background: #191a16;
+}
+
+.adminPage .formGrid input[type='file'] {
+  padding: 7px;
+}
+
+.adminPage .imagePreview {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px dashed rgba(255, 255, 255, .18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .025);
+  color: rgba(233, 234, 242, .52);
+  text-align: center;
+}
+
+.adminPage .imagePreview img {
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  background: #f4f0e7;
+}
+
+.adminPage .fieldHint {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.adminPage .modalAlert {
+  margin: 14px 18px 0;
+}
+
+.adminPage .modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 18px 18px;
+}
+
+.adminPage .adminAlert {
+  margin: 14px 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 110, 110, .35);
+  border-radius: 10px;
+  background: rgba(255, 77, 77, .1);
+  color: #ffb0b0;
+  font-size: 13px;
+}
+
+.adminPage .loginTitle {
+  margin: 0;
+  font-size: 36px;
+}
+
+.adminPage .loginSub {
+  margin: 8px 0 18px;
+}
+
+.adminPage .loginCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 440px;
+}
+
+.adminPage .loginBtn {
+  min-height: 46px;
+}
+
+.adminPage .loginError {
+  color: #ffb0b0;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .adminPage {
+    padding-top: 14px;
+  }
+
+  .adminPage .adminShell,
+  .adminPage .loginWrap {
+    padding: 14px;
+  }
+
+  .adminPage .adminTop,
+  .adminPage .panelHead {
+    flex-direction: column;
+  }
+
+  .adminPage .adminActions {
+    width: 100%;
+  }
+
+  .adminPage .adminActions .btn {
+    flex: 1;
+  }
+
+  .adminPage .formGrid {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .adminPage .barRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .adminPage .barVal {
+    text-align: left;
+  }
+}

@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getProdutos } from '../../data/products.js';
 import { useCart } from '../../state/cart.js';
+import { useProducts } from '../../state/products.jsx';
 import { useWishlist } from '../../state/wishlist.js';
 import { formatBRLFromCents } from '../../utils/money.js';
 
 export default function Product() {
   const { id } = useParams();
-  const prod = useMemo(() => getProdutos().find((p) => p.id === id), [id]);
+  const { products, loading: productsLoading } = useProducts();
+  const prod = useMemo(() => products.find((p) => p.id === id), [products, id]);
   const { upsert } = useCart();
   const { toggle, list } = useWishlist();
 
@@ -30,6 +31,9 @@ export default function Product() {
   }, [prod]);
 
   const wished = list.some((x) => x.id === prod?.id);
+  const discountPercent = prod?.precoAntigo > prod?.preco
+    ? (prod.descontoPercentual || Math.round(((prod.precoAntigo - prod.preco) / prod.precoAntigo) * 100))
+    : 0;
 
   const showPreviousImage = () => {
     setActiveImageIndex((index) => (index - 1 + images.length) % images.length);
@@ -49,6 +53,7 @@ export default function Product() {
     touchStartX.current = null;
   };
 
+  if (!prod && productsLoading) return <div className="container">Carregando produto...</div>;
   if (!prod) return <div className="container">Produto não encontrado.</div>;
 
   return (
@@ -102,6 +107,11 @@ export default function Product() {
             <div className="dPriceNow">{formatBRLFromCents(prod.preco)}</div>
             {prod.precoAntigo ? <div className="dPriceOld">{formatBRLFromCents(prod.precoAntigo)}</div> : null}
           </div>
+          {discountPercent > 0 && (
+            <div className="dDiscount">
+              {discountPercent}% de desconto · você economiza {formatBRLFromCents(prod.precoAntigo - prod.preco)}
+            </div>
+          )}
 
           <div className="dMetaRow">
             <div className="dMeta">
@@ -202,6 +212,7 @@ export default function Product() {
         .dPriceBox{display:flex;align-items:baseline;gap:14px;margin-bottom:12px}
         .dPriceNow{font-family:'DM Sans',sans-serif;font-weight:700;font-size:26px;color:rgba(255,255,255,.96)}
         .dPriceOld{color:rgba(233,234,242,.55);text-decoration:line-through;font-weight:800}
+        .dDiscount{display:inline-flex;margin:-5px 0 14px;padding:7px 10px;background:rgba(216,239,98,.12);color:var(--gold);font-size:12px;font-weight:800}
 
         .dMetaRow{display:flex;gap:30px;padding:13px 0;margin:0 0 22px;border-top:1px solid rgba(255,255,255,.15);border-bottom:1px solid rgba(255,255,255,.15)}
         .dMeta{min-width:90px}
@@ -235,4 +246,3 @@ export default function Product() {
     </div>
   );
 }
-

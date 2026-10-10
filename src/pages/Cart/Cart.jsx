@@ -1,16 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { useCart } from '../../state/cart.js';
-import { produtosSeed } from '../../data/products.js';
+import { useProducts } from '../../state/products.jsx';
 import { formatBRLFromCents } from '../../utils/money.js';
 import { useNavigate } from 'react-router-dom';
-
-function findProduto(id) {
-  return produtosSeed.find((p) => p.id === id) || null;
-}
 
 export default function Cart() {
   const navigate = useNavigate();
   const { items, remove, setQtd, setTamanho, clear } = useCart();
+  const { products } = useProducts();
 
   const [cliente, setCliente] = useState({ nome: '', telefone: '', rua: '', numero: '', bairro: '', cidade: '', cep: '' });
   const [pagamento, setPagamento] = useState('Pix');
@@ -22,7 +19,7 @@ export default function Cart() {
   const enriched = useMemo(() => {
     return items
       .map((it) => {
-        const p = findProduto(it.id);
+        const p = products.find((product) => product.id === it.id);
         if (!p) return null;
         return {
           ...p,
@@ -32,7 +29,7 @@ export default function Cart() {
         };
       })
       .filter(Boolean);
-  }, [items]);
+  }, [items, products]);
 
   const subtotal = useMemo(() => enriched.reduce((a, x) => a + x.preco * x.qtd, 0), [enriched]);
 
@@ -241,4 +238,3 @@ export default function Cart() {
     </div>
   );
 }
-

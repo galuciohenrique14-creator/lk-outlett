@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 export default function ProductCard({ produto, onAddToCart, onToggleWishlist, wished, style }) {
   const discountPercent =
     produto && produto.precoAntigo && produto.precoAntigo > produto.preco
-      ? Math.round(((produto.precoAntigo - produto.preco) / produto.precoAntigo) * 100)
+      ? (produto.descontoPercentual || Math.round(((produto.precoAntigo - produto.preco) / produto.precoAntigo) * 100))
       : null;
 
   return (
@@ -13,7 +13,7 @@ export default function ProductCard({ produto, onAddToCart, onToggleWishlist, wi
       <Link to={`/produto/${produto.id}`} className="pCardMedia">
         <img src={produto.imagem} alt={produto.nome} loading="lazy" />
         {produto.destaque && <div className="pBadge">Destaque</div>}
-        {discountPercent !== null && <div className="pBadge gold">-{discountPercent}%</div>}
+        {discountPercent !== null && <div className="pBadge gold">-{discountPercent}% OFF</div>}
       </Link>
 
       <div className="pCardBody">
@@ -38,6 +38,11 @@ export default function ProductCard({ produto, onAddToCart, onToggleWishlist, wi
             <span className="pOldPrice">{formatBRLFromCents(produto.precoAntigo)}</span>
           ) : null}
         </div>
+        {discountPercent !== null && (
+          <div className="pSaving">
+            Economize {formatBRLFromCents(produto.precoAntigo - produto.preco)} ({discountPercent}%)
+          </div>
+        )}
 
         <Link className="pAdd" to={`/produto/${produto.id}`}>
           Escolher numeração
@@ -62,6 +67,7 @@ export default function ProductCard({ produto, onAddToCart, onToggleWishlist, wi
         .pPriceRow{display:flex;align-items:baseline;gap:10px}
         .pPrice{font-weight:700;font-family:'DM Sans',sans-serif;font-size:16px;color:rgba(255,255,255,.95)}
         .pOldPrice{color:rgba(233,234,242,.52);text-decoration:line-through;font-size:13px;font-weight:700}
+        .pSaving{margin-top:-5px;color:var(--gold);font-size:11px;font-weight:800}
         .pAdd{display:block;text-align:center;text-decoration:none;margin-top:auto;padding:10px 2px 4px;border-top:1px solid rgba(255,255,255,.18);color:var(--gold);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;transition:border-color .2s,color .2s}
         .pAdd:hover{border-color:var(--gold);color:#e8ff86}
         @media(prefers-reduced-motion:reduce){.pCard,.pCardMedia img,.pWish{transition:none!important;animation:none!important}}
@@ -69,4 +75,3 @@ export default function ProductCard({ produto, onAddToCart, onToggleWishlist, wi
     </article>
   );
 }
-

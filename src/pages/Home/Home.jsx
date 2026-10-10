@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { getProdutos, MODALIDADES } from '../../data/products.js';
+import { MODALIDADES } from '../../data/products.js';
 import ProductCard from '../../components/Product/ProductCard.jsx';
 import { useCart } from '../../state/cart.js';
+import { useProducts } from '../../state/products.jsx';
 import { useWishlist } from '../../state/wishlist.js';
 
 export default function Home() {
   const { items } = useCart();
+  const { products, loading: productsLoading, error: catalogError } = useProducts();
   const { list, toggle } = useWishlist();
   const [modality, setModality] = useState('Todas');
   const [search, setSearch] = useState('');
@@ -17,7 +19,7 @@ export default function Home() {
     const minCents = min === '' ? 0 : Number(min) * 100;
     const maxCents = max === '' ? Infinity : Number(max) * 100;
     const query = search.trim().toLocaleLowerCase('pt-BR');
-    let list = getProdutos().filter((p) => p.ativo);
+    let list = products.filter((p) => p.ativo);
 
     if (modality !== 'Todas') list = list.filter((p) => p.modalidade === modality);
     if (query) {
@@ -34,7 +36,7 @@ export default function Home() {
     if (sort === 'destaques') list = [...list].sort((a, b) => Number(b.destaque) - Number(a.destaque));
 
     return list;
-  }, [modality, max, min, search, sort]);
+  }, [modality, max, min, search, sort, products]);
 
   const cartCount = items.reduce((total, item) => total + item.qtd, 0);
 
@@ -122,6 +124,9 @@ export default function Home() {
           </div>
         </div>
 
+        {catalogError && <div className="catalogNotice" role="alert">{catalogError}</div>}
+        {productsLoading && <div className="catalogNotice" role="status">Sincronizando a coleção...</div>}
+
         <div className="resultsLine">
           <span>{filtered.length} {filtered.length === 1 ? 'peça encontrada' : 'peças encontradas'}</span>
           <span>R$ 390,00 · NUMERAÇÃO 36–43</span>
@@ -183,6 +188,7 @@ export default function Home() {
         .priceControl{padding:0 8px;gap:6px;color:var(--lime);font-size:10px}.priceControl input{width:48px}.priceDivider{color:rgba(255,255,255,.4)}
         .sortControl select{padding:0 28px 0 10px;font-size:10px;outline:none}.sortControl option{background:#20211d}
         .resultsLine{display:flex;justify-content:space-between;padding:18px 0 14px;color:rgba(255,255,255,.58);font-size:10px}.resultsLine span:last-child{letter-spacing:.1em}
+        .catalogNotice{margin-top:14px;padding:12px 14px;border:1px solid rgba(128,91,28,.28);background:rgba(255,244,207,.75);color:#60471f;font-size:13px;line-height:1.5}
         .pGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
         .emptyResults{text-align:center;padding:70px 20px 84px;border-bottom:1px solid rgba(255,255,255,.12)}.emptyResults>span{font-size:36px;color:var(--lime)}.emptyResults h3{font-family:'Cormorant Garamond',Georgia,serif;font-size:32px;font-weight:500;margin:8px 0}.emptyResults p{font-size:13px;color:rgba(255,255,255,.6)}.emptyResults button{margin-top:12px;padding:11px 16px;border:1px solid var(--lime);background:transparent;color:var(--lime);cursor:pointer}
         .visuallyHidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -221,4 +227,3 @@ function ScriptNotify() {
   }, []);
   return null;
 }
-
