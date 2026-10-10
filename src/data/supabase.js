@@ -35,11 +35,12 @@ async function request(path, options = {}, authenticated = false) {
     ...options,
     headers: {
       apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${token || SUPABASE_ANON_KEY}`,
+      Authorization: `Bearer ${authenticated ? token : SUPABASE_ANON_KEY}`,
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers
     }
   });
+
   let response = await makeRequest();
   if (response.status === 401 && authenticated) {
     const refreshToken = sessionStorage.getItem(ADMIN_REFRESH_TOKEN_KEY);
@@ -82,11 +83,11 @@ export function signOutAdmin() {
   sessionStorage.removeItem('lkoutlet_admin_ok');
 }
 
-export async function fetchSharedProducts() {
+export function fetchSharedProducts() {
   return request('/rest/v1/products?select=id,data&order=id.asc');
 }
 
-export async function uploadProductImage(dataUrl) {
+async function uploadProductImage(dataUrl) {
   const image = await fetch(dataUrl).then((response) => response.blob());
   const path = `${crypto.randomUUID()}.jpg`;
   const response = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${path}`, {
@@ -107,12 +108,20 @@ export async function uploadProductImage(dataUrl) {
   return `${SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
 }
 
-export async function saveSharedProduct(product) {
-  const stored = { ...product };
-  if (stored.imagem?.startsWith('data:image/')) {
-    stored.imagem = await uploadProductImage(stored.imagem);
-  }
+async function uploadProductImages(product) {
+  const images = product.imagens?.length ? product.imagens : [product.imagem].filter(Boolean);
+  const storedImages = await Promise.all(images.map((image) =>
+    image.startsWith('data:image/') ? uploadProductImage(image) : image
+  ));
+  return {
+    ...product,
+    imagem: storedImages[0] || '',
+    imagens: storedImages
+  };
+}
 
+export async function saveSharedProduct(product) {
+  const stored = await uploadProductImages(product);
   await request('/rest/v1/products?on_conflict=id', {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -122,11 +131,8 @@ export async function saveSharedProduct(product) {
 }
 
 export async function saveSharedProducts(products) {
-  if (!products.length) return;
-  const storedProducts = await Promise.all(products.map(async (product) => {
-    if (!product.imagem?.startsWith('data:image/')) return product;
-    return { ...product, imagem: await uploadProductImage(product.imagem) };
-  }));
+  if (!products.length) return [];
+  const storedProducts = await Promise.all(products.map(uploadProductImages));
   await request('/rest/v1/products?on_conflict=id', {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -135,8 +141,8 @@ export async function saveSharedProducts(products) {
   return storedProducts;
 }
 
-export async function removeSharedProduct(id) {
-  await request(`/rest/v1/products?id=eq.${encodeURIComponent(id)}`, {
+export function removeSharedProduct(id) {
+  return request(`/rest/v1/products?id=eq.${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Prefer: 'return=minimal' }
   }, true);

@@ -8,6 +8,7 @@ export default function AdminLogin() {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
 
   return (
@@ -36,17 +37,11 @@ export default function AdminLogin() {
         }}>
           <label>
             E-mail
-            <input
-              type="email"
-              autoComplete="username"
-              required
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-            />
+            <input type="email" autoComplete="username" required value={user} onChange={(event) => setUser(event.target.value)} />
           </label>
           <label>
             Senha
-            <input type="password" autoComplete="current-password" required value={pass} onChange={(e) => setPass(e.target.value)} />
+            <input type="password" autoComplete="current-password" required value={pass} onChange={(event) => setPass(event.target.value)} />
           </label>
           {error && <div className="loginError" role="alert">{error}</div>}
           <button className="loginBtn" type="submit" disabled={submitting || !isSupabaseConfigured}>

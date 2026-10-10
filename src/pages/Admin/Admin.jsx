@@ -138,8 +138,8 @@ export default function Admin() {
             <button className="btn" onClick={() => setSettingsModalOpen(true)}>Configurações</button>
             <button
               className="btn secondary"
-              onClick={() => {
-                signOutAdmin();
+              onClick={async () => {
+                await signOutAdmin();
                 setAuthed(false);
                 navigate('/admin/login');
               }}
@@ -201,12 +201,12 @@ export default function Admin() {
                 <div>
                   <div className="panelTitle">Tabela de produtos</div>
                   <div className="panelMuted">
-                    {remote ? 'Catálogo compartilhado com a loja.' : 'Catálogo compartilhado indisponível.'}
+                    {remote ? 'Catálogo compartilhado com a loja.' : 'Configure o Supabase para compartilhar alterações.'}
                   </div>
                 </div>
                 <button
                   className="btn"
-                  disabled={productsLoading}
+                  disabled={productsLoading || !remote}
                   onClick={() => {
                     setEditingProduct(null);
                     setProductError('');
@@ -220,6 +220,7 @@ export default function Admin() {
                       promocaoAtiva: false,
                       descontoPercentual: 10,
                       imagem: '',
+                      imagens: [],
                       categoria: CATEGORIAS[0],
                       modalidade: '',
                       tamanho: 'P,M,G,GG',
@@ -276,6 +277,7 @@ export default function Admin() {
                             setEditingProduct(p);
                             setProductDraft({
                               ...p,
+                              imagens: p.imagens?.length ? p.imagens : [p.imagem].filter(Boolean),
                               precoBase: getBasePrice(p),
                               promocaoAtiva: Boolean(p.promocaoAtiva || p.precoAntigo > p.preco),
                               descontoPercentual: getDiscountPercent(p)
@@ -425,7 +427,7 @@ export default function Admin() {
               <div className="modalHead">
                 <div>
                   <div className="modalTitle">{editingProduct ? 'Editar produto' : 'Novo produto'}</div>
-                  <div className="modalMuted">Escolha uma foto do celular ou computador.</div>
+                  <div className="modalMuted">Selecione uma ou mais fotos do produto.</div>
                 </div>
                 <button className="mini" onClick={() => setProductModalOpen(false)}>Fechar</button>
               </div>
@@ -441,27 +443,52 @@ export default function Admin() {
                   <textarea value={productDraft?.descricao || ''} onChange={(e) => setProductDraft((d) => ({ ...d, descricao: e.target.value }))} />
                 </label>
                 <label>
-                  Foto do produto
+                  Fotos do produto
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={async (event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
+                      const files = Array.from(event.target.files || []);
+                      if (!files.length) return;
                       setProductError('');
                       try {
-                        const imagem = await optimizeImage(file);
-                        setProductDraft((draft) => ({ ...draft, imagem }));
+                        const images = await Promise.all(files.map(optimizeImage));
+                        setProductDraft((draft) => {
+                          const currentImages = draft.imagens?.length
+                            ? draft.imagens
+                            : [draft.imagem].filter(Boolean);
+                          const nextImages = [...currentImages, ...images];
+                          return { ...draft, imagem: nextImages[0], imagens: nextImages };
+                        });
                       } catch (error) {
-                        setProductError(`Não foi possível carregar a imagem: ${error.message}`);
+                        setProductError(`Não foi possível carregar as fotos: ${error.message}`);
+                      } finally {
+                        event.target.value = '';
                       }
                     }}
                   />
                 </label>
-                <div className="imagePreview">
-                  {productDraft?.imagem
-                    ? <img src={productDraft.imagem} alt="Prévia do produto" />
-                    : <span>Selecione uma imagem para ver a prévia</span>}
+                <div className="imagePreview" aria-label="Prévia das fotos do produto">
+                  {productDraft?.imagens?.length
+                    ? productDraft.imagens.map((image, index) => (
+                      <div className="imagePreviewItem" key={`${image}-${index}`}>
+                        <img src={image} alt={`Prévia da foto ${index + 1}`} />
+                        <button
+                          className="mini danger"
+                          type="button"
+                          aria-label={`Remover foto ${index + 1}`}
+                          onClick={() => setProductDraft((draft) => {
+                            const imagens = draft.imagens.filter((_, imageIndex) => imageIndex !== index);
+                            return { ...draft, imagens, imagem: imagens[0] || '' };
+                          })}
+                        >
+                          Remover
+                        </button>
+                        {index === 0 && <span className="imagePrimaryLabel">Capa</span>}
+                      </div>
+                    ))
+                    : <span>Selecione uma ou mais fotos para ver a prévia</span>}
                 </div>
 
                 <label>
@@ -564,7 +591,8 @@ export default function Admin() {
                   onClick={async () => {
                     const d = productDraft;
                     if (!d?.nome?.trim()) return setProductError('Informe o nome do produto.');
-                    if (!d?.imagem) return setProductError('Selecione uma imagem para o produto.');
+                    const imagens = d?.imagens?.length ? d.imagens : [d?.imagem].filter(Boolean);
+                    if (!imagens.length) return setProductError('Selecione ao menos uma foto para o produto.');
                     if (!MODALIDADES.includes(d.modalidade)) return setProductError('Selecione Futsal ou Society.');
                     if (!Number.isFinite(d.precoBase) || d.precoBase <= 0) return setProductError('Informe um preço normal maior que zero.');
                     if (d.promocaoAtiva && (!Number.isInteger(d.descontoPercentual) || d.descontoPercentual < 1 || d.descontoPercentual > 99)) {
@@ -576,6 +604,8 @@ export default function Admin() {
                     const productToSave = {
                       ...productData,
                       nome: d.nome.trim(),
+                      imagem: imagens[0],
+                      imagens,
                       preco: d.promocaoAtiva ? promotionalPrice : d.precoBase,
                       precoAntigo: d.promocaoAtiva ? d.precoBase : 0,
                       descontoPercentual: d.promocaoAtiva ? d.descontoPercentual : 0

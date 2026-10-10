@@ -1,16 +1,16 @@
-# Catálogo compartilhado da LK Outlet
+# Configuração do catálogo compartilhado
 
-O catálogo da loja usa o Supabase para compartilhar produtos, preços, promoções e imagens entre dispositivos. O acesso administrativo permanece desativado até o Supabase estar configurado; não há senha administrativa embutida no código.
+O catálogo usa o Supabase para que produtos, preços e fotos publicados pelo administrador apareçam para todos os visitantes.
 
-## Preparação do Supabase
+## Preparar o Supabase
 
-1. Crie um projeto Supabase e execute [`supabase/setup.sql`](./supabase/setup.sql) uma vez no SQL Editor.
-2. Crie a conta de e-mail/senha do administrador para `galuciohenrique14@gmail.com`. As políticas RLS e as políticas de imagens autorizam escrita somente para esse e-mail autenticado.
-3. Copie a Project URL e a chave `anon`/publishable do projeto.
-4. Configure estas variáveis no ambiente local e em Vercel → Settings → Environment Variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-5. Faça novo deploy depois de adicionar as variáveis.
-6. Entre em `/admin/login` usando o e-mail e a senha cadastrados no Supabase. No primeiro acesso autenticado, se a tabela remota estiver vazia, os produtos iniciais do catálogo são copiados para o projeto; caso contrário, os produtos remotos existentes são mantidos.
+1. Crie um projeto no Supabase e execute [`supabase/setup.sql`](./supabase/setup.sql) no SQL Editor.
+2. No Supabase Authentication, crie a conta do administrador com o e-mail `galuciohenrique14@gmail.com`. A política do banco permite alterações somente para essa conta.
+3. Em **Project Settings → API**, copie a Project URL e a chave pública `anon`/publishable.
+4. Configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no arquivo `.env` local e em **Vercel → Project Settings → Environment Variables**.
+5. Faça um novo deploy no Vercel depois de configurar as variáveis.
+6. Acesse `/admin/login` e entre com o e-mail e a senha da conta criada no Supabase.
 
-A chave `anon` é pública e pode ser usada no frontend; não configure a chave `service_role` no Vite, no navegador ou em variáveis `VITE_*`. As alterações de escrita são protegidas por autenticação do Supabase e pelas políticas RLS criadas no SQL.
+No primeiro acesso administrativo, se ainda não houver produtos no banco, o catálogo inicial será publicado. Produtos e fotos cadastrados depois são enviados ao Supabase e ficam disponíveis no site para todos os usuários. O catálogo é sincronizado ao abrir o site, voltar para a aba e periodicamente enquanto a página estiver aberta.
+
+As imagens são otimizadas no navegador e armazenadas no bucket público `product-images`. A chave `anon`/publishable é pública; **nunca** coloque a chave `service_role` no frontend, em variáveis `VITE_*` ou neste repositório.

@@ -15,9 +15,11 @@ function cacheProducts(products) {
 }
 
 export function ProductsProvider({ children }) {
-  const [products, setProducts] = useState(() => getProdutos());
+  const [products, setProducts] = useState(() => isSupabaseConfigured ? getProdutos() : produtosSeed);
   const [loading, setLoading] = useState(isSupabaseConfigured);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(
+    isSupabaseConfigured ? '' : 'O catálogo compartilhado ainda não foi configurado.'
+  );
   const refreshSequence = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -64,22 +66,28 @@ export function ProductsProvider({ children }) {
 
   useEffect(() => {
     refresh();
-    window.addEventListener('lk:products-refresh', refresh);
-    return () => window.removeEventListener('lk:products-refresh', refresh);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const intervalId = window.setInterval(refresh, 30000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
   }, [refresh]);
 
   const upsert = useCallback(async (product) => {
-    const saved = isSupabaseConfigured ? await saveSharedProduct(product) : product;
+    if (!isSupabaseConfigured) {
+      throw new Error('Configure o catálogo compartilhado antes de cadastrar produtos.');
+    }
+    const saved = await saveSharedProduct(product);
     const index = products.findIndex((item) => item.id === saved.id);
     const next = index < 0
       ? [saved, ...products]
       : products.map((item) => item.id === saved.id ? saved : item);
-    if (!isSupabaseConfigured) {
-      cacheProducts(next);
-      setProducts(next);
-      setError('');
-      return;
-    }
     setProducts(next);
     try {
       cacheProducts(next);
@@ -89,14 +97,11 @@ export function ProductsProvider({ children }) {
   }, [products]);
 
   const remove = useCallback(async (id) => {
-    if (isSupabaseConfigured) await removeSharedProduct(id);
-    const next = products.filter((item) => item.id !== id);
     if (!isSupabaseConfigured) {
-      cacheProducts(next);
-      setProducts(next);
-      setError('');
-      return;
+      throw new Error('Configure o catálogo compartilhado antes de remover produtos.');
     }
+    await removeSharedProduct(id);
+    const next = products.filter((item) => item.id !== id);
     setProducts(next);
     try {
       cacheProducts(next);
