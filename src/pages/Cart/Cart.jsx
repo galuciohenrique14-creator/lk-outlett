@@ -57,7 +57,7 @@ export default function Cart() {
 
   const buildWhatsAppMessage = () => {
     const itensTxt = enriched
-      .map((x) => `• ${x.nome}\n  Tamanho: ${x.tamanho} | Quantidade: ${x.qtd}\n  Unitário: ${formatBRLFromCents(x.preco)} | Subtotal: ${formatBRLFromCents(x.preco * x.qtd)}\n  Foto: ${window.location.origin}${x.imagem}`)
+      .map((x) => `• ${x.nome}\n  Tamanho: ${x.tamanho} | Quantidade: ${x.qtd}\n  Unitário: ${formatBRLFromCents(x.preco)} | Subtotal: ${formatBRLFromCents(x.preco * x.qtd)}\n  Foto: ${new URL(x.imagem, window.location.origin).href}`)
       .join('\n');
 
     return `Olá! Quero fazer este pedido na LK OUTLET.\n\nCLIENTE\nNome: ${cliente.nome.trim()}\nTelefone: ${cliente.telefone.trim()}\n\nENDEREÇO DE ENTREGA\nRua: ${cliente.rua.trim()}, ${cliente.numero.trim()}\nBairro: ${cliente.bairro.trim()}\nCidade: ${cliente.cidade.trim()}\nCEP: ${cliente.cep.trim() || 'Não informado'}\n\nPAGAMENTO\nForma: ${pagamento}\n\nPRODUTOS\n${itensTxt}\n\nSubtotal: ${formatBRLFromCents(subtotal)}\nDesconto: ${formatBRLFromCents(desconto)}\nTotal do pedido: ${formatBRLFromCents(total)}\nCupom: ${cupom ? cupom.toUpperCase() : '—'}`;
