@@ -4,8 +4,8 @@ O catálogo usa o Supabase para que produtos, preços e fotos publicados pelo ad
 
 ## Preparar o Supabase
 
-1. No Supabase Authentication, crie a conta do administrador com o e-mail `galuciohenrique14@gmail.com`.
-2. No SQL Editor, execute [`supabase/setup.sql`](./supabase/setup.sql). A política permite alterações somente para o usuário Supabase de ID `f118a85d-3d8c-4d6e-bac4-5d1818ae3f16`, evitando depender do e-mail presente no token. Se estiver configurando outro projeto Supabase, substitua esse UUID pelo ID da conta administrativa desse projeto antes de executar o script.
+1. No Supabase Authentication, crie a conta do administrador com o e-mail `galuciohenrique33@gmail.com`.
+2. No SQL Editor, execute [`supabase/setup.sql`](./supabase/setup.sql). A política permite alterações somente para o usuário Supabase de ID `ddedb3ad-cc32-4344-860d-9fd7169bbe58`, evitando depender do e-mail presente no token. Se estiver configurando outro projeto Supabase, substitua esse UUID pelo ID da conta administrativa desse projeto antes de executar o script.
 3. Em **Project Settings → API**, copie a Project URL e a chave pública `anon`/publishable.
 4. Configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no arquivo `.env` local e em **Vercel → Project Settings → Environment Variables**.
 5. Faça um novo deploy no Vercel depois de configurar as variáveis.

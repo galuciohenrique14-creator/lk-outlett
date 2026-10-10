@@ -19,10 +19,10 @@ create policy "Public can read products"
 create policy "LK Outlet owner can manage products"
   on public.products for all to authenticated
   using (
-    (select auth.uid()) = 'f118a85d-3d8c-4d6e-bac4-5d1818ae3f16'::uuid
+    (select auth.uid()) = 'ddedb3ad-cc32-4344-860d-9fd7169bbe58'::uuid
   )
   with check (
-    (select auth.uid()) = 'f118a85d-3d8c-4d6e-bac4-5d1818ae3f16'::uuid
+    (select auth.uid()) = 'ddedb3ad-cc32-4344-860d-9fd7169bbe58'::uuid
   );
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -43,9 +43,9 @@ create policy "LK Outlet owner can manage product images"
   on storage.objects for all to authenticated
   using (
     bucket_id = 'product-images'
-    and (select auth.uid()) = 'f118a85d-3d8c-4d6e-bac4-5d1818ae3f16'::uuid
+    and (select auth.uid()) = 'ddedb3ad-cc32-4344-860d-9fd7169bbe58'::uuid
   )
   with check (
     bucket_id = 'product-images'
-    and (select auth.uid()) = 'f118a85d-3d8c-4d6e-bac4-5d1818ae3f16'::uuid
+    and (select auth.uid()) = 'ddedb3ad-cc32-4344-860d-9fd7169bbe58'::uuid
   );
